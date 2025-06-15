@@ -18,48 +18,147 @@ The dataset consists of the following files:
 - `MavenMarket_Transactions_1998.csv` - Sales transactions for 1998
 - `MavenMarket_Returns_1997-1998.csv` - Product returns data for 1997-1998
 
-## Data Model
+## DAX Measures
 
-The dataset follows a star schema design with the following relationships:
+Total Sales = 
+SUMX(
+    'MavenMarket_Transactions',
+    'MavenMarket_Transactions'[Quantity] * 'MavenMarket_Transactions'[Unit Price]
+)
 
-- Transactions are linked to Products, Customers, Stores, and Calendar
-- Stores are linked to Regions
-- Returns are linked to Products and Calendar
+// Year-over-Year Sales Growth
+YoY Sales Growth = 
+VAR CurrentYearSales = [Total Sales]
+VAR PreviousYearSales = 
+    CALCULATE(
+        [Total Sales],
+        DATEADD('MavenMarket_Calendar'[Date], -1, YEAR)
+    )
+RETURN
+    DIVIDE(
+        CurrentYearSales - PreviousYearSales,
+        PreviousYearSales,
+        0
+    )
 
-## Key Metrics
+// Average Transaction Value
+Average Transaction Value = 
+DIVIDE(
+    [Total Sales],
+    DISTINCTCOUNT('MavenMarket_Transactions'[Transaction ID]),
+    0
+)
 
-The dataset allows for analysis of:
-- Sales performance by product, store, region, and time period
-- Customer purchasing patterns and segmentation
-- Return rates and reasons
-- Regional performance comparisons
-- Store performance metrics
+// Return Rate
+Return Rate = 
+DIVIDE(
+    COUNTROWS('MavenMarket_Returns'),
+    COUNTROWS('MavenMarket_Transactions'),
+    0
+)
 
-## Usage
+// Product Performance
+Product Sales = 
+CALCULATE(
+    [Total Sales],
+    ALLSELECTED('MavenMarket_Products')
+)
 
-This dataset is ideal for:
-- Sales analysis and forecasting
-- Customer behavior analysis
-- Inventory management
-- Regional performance analysis
-- Store performance optimization
-- Return analysis and reduction strategies
+// Store Performance
+Store Sales = 
+CALCULATE(
+    [Total Sales],
+    ALLSELECTED('MavenMarket_Stores')
+)
 
-## Data Quality
+// Regional Performance
+Regional Sales = 
+CALCULATE(
+    [Total Sales],
+    ALLSELECTED('MavenMarket_Regions')
+)
 
-The dataset has been cleaned and structured for analysis, with:
-- Consistent date formatting
-- Standardized product categories
-- Normalized customer segments
-- Hierarchical regional structure
-- Complete transaction history
+// Customer Segment Analysis
+Segment Sales = 
+CALCULATE(
+    [Total Sales],
+    ALLSELECTED('MavenMarket_Customers'[Customer Segment])
+)
 
-## File Sizes
-- Products: ~102KB
-- Customers: ~1.5MB
-- Returns: ~138KB
-- Stores: ~2.8KB
-- Regions: ~2.8KB
-- Calendar: ~7.8KB
-- Transactions 1997: ~2.9MB
-- Transactions 1998: ~6.1MB 
+// Time Intelligence
+MTD Sales = 
+CALCULATE(
+    [Total Sales],
+    DATESMTD('MavenMarket_Calendar'[Date])
+)
+
+YTD Sales = 
+CALCULATE(
+    [Total Sales],
+    DATESYTD('MavenMarket_Calendar'[Date])
+)
+
+// Product Category Analysis
+Category Sales = 
+CALCULATE(
+    [Total Sales],
+    ALLSELECTED('MavenMarket_Products'[Product Category])
+)
+
+// Profit Margin
+Profit Margin = 
+DIVIDE(
+    [Total Sales] - SUM('MavenMarket_Transactions'[Cost]),
+    [Total Sales],
+    0
+)
+
+// Customer Retention
+Returning Customers = 
+CALCULATE(
+    DISTINCTCOUNT('MavenMarket_Customers'[Customer ID]),
+    FILTER(
+        'MavenMarket_Transactions',
+        COUNTROWS('MavenMarket_Transactions') > 1
+    )
+)
+
+// Store Traffic
+Store Traffic = 
+DISTINCTCOUNT('MavenMarket_Transactions'[Transaction ID])
+
+// Product Return Rate by Category
+Category Return Rate = 
+DIVIDE(
+    CALCULATE(
+        COUNTROWS('MavenMarket_Returns'),
+        ALLSELECTED('MavenMarket_Products'[Product Category])
+    ),
+    CALCULATE(
+        COUNTROWS('MavenMarket_Transactions'),
+        ALLSELECTED('MavenMarket_Products'[Product Category])
+    ),
+    0
+)
+
+// Seasonal Analysis
+Seasonal Sales = 
+CALCULATE(
+    [Total Sales],
+    ALLSELECTED('MavenMarket_Calendar'[Season])
+)
+
+// Regional Growth
+Regional Growth = 
+VAR CurrentRegionSales = [Regional Sales]
+VAR PreviousRegionSales = 
+    CALCULATE(
+        [Regional Sales],
+        DATEADD('MavenMarket_Calendar'[Date], -1, YEAR)
+    )
+RETURN
+    DIVIDE(
+        CurrentRegionSales - PreviousRegionSales,
+        PreviousRegionSales,
+        0
+    ) 
